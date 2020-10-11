@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "spring-config-decryptor-webhook.fullname" . }}
+  labels:
+    {{- include "spring-config-decryptor-webhook.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "spring-config-decryptor-webhook.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+    {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      labels:
+        {{- include "spring-config-decryptor-webhook.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "spring-config-decryptor-webhook.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.hostNetwork }}
+      hostNetwork: true
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - 'webhook'
+            - '--v=2'
+            - --secure-port={{ .Values.securePort }}
+            - --tls-private-key-file=/etc/spring-config-decryptor/certificate/tls.key
+            - --tls-cert-file=/etc/spring-config-decryptor/certificate/tls.crt
+            - --encrypt-key-file=/etc/spring-config-decryptor/encrypt-key/{{ .Values.encryptKey.secretKey }}
+          env:
+          # Extra environment variables
+          {{- if .Values.extraEnv }}
+          {{ toYaml .Values.extraEnv | nindent 8 }}
+          {{- end }}
+          ports:
+          - name: https
+            containerPort: {{ .Values.securePort }}
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: 6081
+              scheme: HTTP
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 6081
+              scheme: HTTP
+          volumeMounts:
+          - name: tls-key-pair
+            mountPath: "/etc/spring-config-decryptor/certificate"
+            readOnly: true
+          - name: encrypt-key
+            mountPath: "/etc/spring-config-decryptor/encrypt-key"
+            readOnly: true
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+      - name: tls-key-pair
+        secret:
+          secretName: {{ include "spring-config-decryptor-webhook.fullname" . }}-certificate
+      - name: encrypt-key
+        secret:
+          secretName: {{ .Values.encryptKey.secretName }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -1,0 +1,39 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ include "spring-config-decryptor-webhook.fullname" . }}-issuer
+  labels:
+    {{- include "spring-config-decryptor-webhook.labels" . | nindent 4 }}
+spec:
+  selfSigned: {}
+
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "spring-config-decryptor-webhook.fullname" . }}-certificate
+  labels:
+    {{- include "spring-config-decryptor-webhook.labels" . | nindent 4 }}
+spec:
+  secretName: {{ include "spring-config-decryptor-webhook.fullname" . }}-certificate
+  duration: 168h
+  renewBefore: 48h
+  issuerRef:
+    name: {{ include "spring-config-decryptor-webhook.fullname" . }}-issuer
+    kind: Issuer
+  commonName: {{ include "spring-config-decryptor-webhook.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
+  dnsNames:
+  - {{ include "spring-config-decryptor-webhook.fullname" . }}.{{ .Release.Namespace }}.svc
+  - {{ include "spring-config-decryptor-webhook.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
+  {{- with .Values.certificate.dnsNames -}}
+  {{ toYaml . | nindent 2 }}
+  {{- end }}
+  isCA: true
+  privateKey:
+    algorithm: RSA
+  usages:
+  - cert sign
+  - crl sign
+  - server auth
+  - client auth

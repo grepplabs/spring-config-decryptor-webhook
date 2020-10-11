@@ -1,0 +1,69 @@
+{{- $isV1AdmissionRegistration := false -}}
+{{- if (not (.Capabilities.APIVersions.Has "admissionregistration.k8s.io/v1")) }}
+apiVersion: admissionregistration.k8s.io/v1beta1
+{{- else }}
+{{- $isV1AdmissionRegistration = true -}}
+apiVersion: admissionregistration.k8s.io/v1
+{{- end }}
+kind: MutatingWebhookConfiguration
+metadata:
+  name: {{ include "spring-config-decryptor-webhook.fullname" . }}
+  labels:
+    {{- include "spring-config-decryptor-webhook.labels" . | nindent 4 }}
+  annotations:
+    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "spring-config-decryptor-webhook.fullname" . }}-certificate
+webhooks:
+  - name: configmaps-mutate.spring-config-decryptor.grepplabs.com
+    {{- if $isV1AdmissionRegistration }}
+    admissionReviewVersions: ["v1", "v1beta1"]
+    {{- end }}
+    {{- if .Values.webhook.namespaceSelector }}
+    namespaceSelector: {{ toYaml .Values.webhook.namespaceSelector | nindent 6 }}
+    {{- end }}
+    {{- if .Values.webhook.objectSelector }}
+    objectSelector: {{ toYaml .Values.webhook.objectSelector | nindent 6 }}
+    {{- end }}
+    failurePolicy: Fail
+    sideEffects: None
+    rules:
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      operations: [ "CREATE" , "UPDATE"]
+      resources: ["configmaps"]
+      scope: "Namespaced"
+    clientConfig:
+     {{- if .Values.webhook.url }}
+      url: {{ printf "%s/configmaps" .Values.webhook.url }}
+     {{- else }}
+      service:
+        namespace: {{ .Release.Namespace | quote }}
+        name: {{ include "spring-config-decryptor-webhook.fullname" . }}
+        path: /configmaps
+     {{- end }}
+  - name: secrets-mutate.spring-config-decryptor.grepplabs.com
+    {{- if $isV1AdmissionRegistration }}
+    admissionReviewVersions: ["v1", "v1beta1"]
+    {{- end }}
+    {{- if .Values.webhook.namespaceSelector }}
+    namespaceSelector: {{ toYaml .Values.webhook.namespaceSelector | nindent 6 }}
+    {{- end }}
+    {{- if .Values.webhook.objectSelector }}
+    objectSelector: {{ toYaml .Values.webhook.objectSelector | nindent 6 }}
+    {{- end }}
+    failurePolicy: Fail
+    sideEffects: None
+    rules:
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      operations: [ "CREATE" , "UPDATE"]
+      resources: ["secrets"]
+      scope: "Namespaced"
+    clientConfig:
+     {{- if .Values.webhook.url }}
+      url: {{ printf "%s/secrets" .Values.webhook.url }}
+     {{- else }}
+      service:
+        namespace: {{ .Release.Namespace | quote }}
+        name: {{ include "spring-config-decryptor-webhook.fullname" . }}
+        path: /secrets
+     {{- end }}

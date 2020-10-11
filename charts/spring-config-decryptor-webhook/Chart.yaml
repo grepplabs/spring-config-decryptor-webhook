@@ -1,0 +1,6 @@
+apiVersion: v2
+appVersion: 0.0.1
+name: spring-config-decryptor-webhook
+description: A Helm chart for spring-config-decryptor Kubernetes webhook
+type: application
+version: 0.1.0

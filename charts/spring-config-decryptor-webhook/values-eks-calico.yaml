@@ -1,0 +1,19 @@
+hostNetwork: false
+
+webhook:
+  url: https://spring-config-decryptor-webhook.internal.eks.grepplabs.com
+
+certificate:
+  dnsNames:
+    - spring-config-decryptor-webhook.internal.eks.grepplabs.com
+
+service:
+  type: LoadBalancer
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: "spring-config-decryptor-webhook.internal.eks.grepplabs.com"
+    service.beta.kubernetes.io/aws-load-balancer-internal: 0.0.0.0/0
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: ssl
+
+encryptKey:
+  secretName: spring-encrypt-key
+  secretKey: rsa-private-key
