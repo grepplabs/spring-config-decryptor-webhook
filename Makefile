@@ -6,7 +6,7 @@ TAG           ?= latest
 
 BUILD_FLAGS   ?=
 BINARY        ?= spring-config-decryptor-webhook
-ROOT_DIR      := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+ROOT_DIR      := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 LDFLAGS       ?= -w -s
 
 LOCAL_IMAGE   ?= local/$(BINARY)
